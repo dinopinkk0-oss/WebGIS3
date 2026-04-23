@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Maps QGIS2Web — WebGIS Sorosutan</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet"/>
+
+  <!-- CSS QGIS2Web (dari subfolder qgis2web/) -->
+  <link rel="stylesheet" href="qgis2web/css/leaflet.css">
+  <link rel="stylesheet" href="qgis2web/css/L.Control.Layers.Tree.css">
+  <link rel="stylesheet" href="qgis2web/css/L.Control.Locate.min.css">
+  <link rel="stylesheet" href="qgis2web/css/qgis2web.css">
+  <link rel="stylesheet" href="qgis2web/css/fontawesome-all.min.css">
+  <link rel="stylesheet" href="qgis2web/css/leaflet.photon.css">
+  <link rel="stylesheet" href="qgis2web/css/leaflet-measure.css">
+
+  <style>
+    :root {
+      --p1: #ffe4ef;
+      --p2: #ffb3d1;
+      --p3: #ff80b0;
+      --p4: #e84d8a;
+      --p5: #c23070;
+      --text: #2d0f1e;
+      --faint: #c490a8;
+      --nav-h: 54px;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; font-family: 'Poppins', sans-serif; }
+
+    /* Map tepat di bawah navbar */
+    #map {
+      position: absolute;
+      top: var(--nav-h);
+      left: 0; right: 0; bottom: 0;
+      width: 100%;
+      height: calc(100vh - var(--nav-h));
+    }
+
+    /* ── Navbar ── */
+    #qgis-navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 99999;
+      height: var(--nav-h);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.4rem;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1.5px solid rgba(255, 179, 209, 0.45);
+      box-shadow: 0 2px 18px rgba(232, 77, 138, 0.10);
+      gap: 0.8rem;
+    }
+    .qnav-brand {
+      display: flex; align-items: center; gap: 0.55rem;
+      flex-shrink: 0; text-decoration: none;
+    }
+    .qnav-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--p3), var(--p4));
+      border-radius: 9px;
+      display: grid; place-items: center;
+      font-size: 0.9rem;
+      box-shadow: 0 3px 10px rgba(232, 77, 138, 0.28);
+    }
+    .qnav-title {
+      font-size: 0.85rem; font-weight: 700;
+      color: var(--text); line-height: 1.2;
+    }
+    .qnav-title small {
+      display: block;
+      font-size: 0.63rem; font-weight: 500;
+      color: var(--faint);
+    }
+    .qnav-badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.26rem 0.85rem;
+      background: linear-gradient(135deg, var(--p1), #ffe8f3);
+      border: 1px solid var(--p2);
+      border-radius: 50px;
+      font-size: 0.68rem; font-weight: 700;
+      color: var(--p4); white-space: nowrap;
+    }
+    .qnav-right { display: flex; align-items: center; gap: 0.45rem; flex-shrink: 0; }
+    .qnav-btn {
+      display: inline-flex; align-items: center; gap: 0.32rem;
+      padding: 0.34rem 0.9rem;
+      border-radius: 50px;
+      font-size: 0.72rem; font-weight: 600;
+      text-decoration: none; border: none; cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      background: transparent; color: var(--p4);
+      border: 1.5px solid var(--p2);
+      transition: all 0.2s ease; white-space: nowrap;
+    }
+    .qnav-btn:hover {
+      background: var(--p1); border-color: var(--p3);
+      transform: translateY(-1px);
+    }
+    .qnav-btn-fill {
+      background: linear-gradient(135deg, var(--p3), var(--p4));
+      color: white !important; border-color: transparent;
+      box-shadow: 0 3px 10px rgba(232, 77, 138, 0.28);
+    }
+    .qnav-btn-fill:hover {
+      background: linear-gradient(135deg, var(--p4), var(--p5));
+      box-shadow: 0 5px 14px rgba(232, 77, 138, 0.38);
+    }
+
+    /* ── Override popup Leaflet → pink theme ── */
+    .leaflet-popup-content-wrapper {
+      border-radius: 14px !important;
+      box-shadow: 0 8px 28px rgba(232, 77, 138, 0.18) !important;
+      border: 1.5px solid var(--p2) !important;
+      font-family: 'Poppins', sans-serif !important;
+      font-size: 0.8rem !important;
+      padding: 0 !important;
+      overflow: hidden;
+    }
+    .leaflet-popup-content { margin: 0 !important; }
+    .leaflet-popup-content table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .leaflet-popup-content table tr:first-child td {
+      background: linear-gradient(135deg, var(--p3), var(--p4));
+      color: white; font-weight: 700;
+      padding: 0.6rem 0.9rem;
+    }
+    .leaflet-popup-content table tr td,
+    .leaflet-popup-content table tr th {
+      padding: 0.3rem 0.9rem;
+      border-bottom: 1px solid var(--p1);
+      color: var(--text);
+    }
+    .leaflet-popup-content table tr th {
+      color: var(--p4); font-weight: 600;
+      background: rgba(255, 228, 239, 0.4);
+      text-align: left;
+    }
+    .leaflet-popup-close-button { color: var(--p4) !important; font-size: 1.1rem !important; }
+    .leaflet-popup-tip { background: var(--p2) !important; }
+
+    /* ── Override kontrol zoom ── */
+    .leaflet-bar a { color: var(--p4) !important; font-weight: 700 !important; }
+    .leaflet-bar a:hover { background: var(--p1) !important; }
+
+    @media (max-width: 540px) {
+      .qnav-badge { display: none; }
+      .qnav-btn { padding: 0.28rem 0.6rem; font-size: 0.66rem; }
+      #qgis-navbar { padding: 0 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar Pink -->
+  <nav id="qgis-navbar">
+    <a href="index.html" class="qnav-brand">
+      <div class="qnav-icon">🛰</div>
+      <div class="qnav-title">
+        Maps QGIS2Web
+        <small>Pemukiman Sorosutan</small>
+      </div>
+    </a>
+
+    <span class="qnav-badge">🌸 WebGIS · SIG Internet</span>
+
+    <div class="qnav-right">
+      <a href="manual.html" class="qnav-btn">🗺 Maps Manual</a>
+      <a href="index.html" class="qnav-btn qnav-btn-fill">🏠 Beranda</a>
+    </div>
+  </nav>
+
+  <!-- Map container -->
+  <div id="map"></div>
+
+  <!-- JS QGIS2Web (dari subfolder qgis2web/) -->
+  <script src="qgis2web/js/qgis2web_expressions.js"></script>
+  <script src="qgis2web/js/leaflet.js"></script>
+  <script src="qgis2web/js/L.Control.Layers.Tree.min.js"></script>
+  <script src="qgis2web/js/L.Control.Locate.min.js"></script>
+  <script src="qgis2web/js/leaflet.rotatedMarker.js"></script>
+  <script src="qgis2web/js/leaflet.pattern.js"></script>
+  <script src="qgis2web/js/leaflet-hash.js"></script>
+  <script src="qgis2web/js/Autolinker.min.js"></script>
+  <script src="qgis2web/js/labelgun.min.js"></script>
+  <script src="qgis2web/js/labels.js"></script>
+  <script src="qgis2web/js/leaflet.photon.js"></script>
+  <script src="qgis2web/js/leaflet-measure.js"></script>
+  <script src="qgis2web/data/BangunanRumah2_1.js"></script>
+
+  <script>
+    var highlightLayer;
+    function highlightFeature(e) {
+      highlightLayer = e.target;
+      if (e.target.feature.geometry.type === 'LineString' || e.target.feature.geometry.type === 'MultiLineString') {
+        highlightLayer.setStyle({ color: 'rgba(255,255,0,1.00)' });
+      } else {
+        highlightLayer.setStyle({ fillColor: 'rgba(255,255,0,1.00)', fillOpacity: 1 });
+      }
+    }
+
+    var map = L.map('map', {
+      zoomControl: false, maxZoom: 28, minZoom: 1
+    }).fitBounds([
+      [-7.8329731141192855, 110.36753181230718],
+      [-7.8121534664895655, 110.38183313596721]
+    ]);
+
+    var hash = new L.Hash(map);
+    map.attributionControl.setPrefix(
+      '<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; ' +
+      '<a href="https://leafletjs.com">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>'
+    );
+
+    var autolinker = new Autolinker({ truncate: { length: 30, location: 'smart' } });
+
+    function removeEmptyRowsFromPopupContent(content, feature) {
+      var tempDiv = document.createElement('div');
+      tempDiv.innerHTML = content;
+      var rows = tempDiv.querySelectorAll('tr');
+      for (var i = 0; i < rows.length; i++) {
+        var td = rows[i].querySelector('td.visible-with-data');
+        var key = td ? td.id : '';
+        if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+          rows[i].parentNode.removeChild(rows[i]);
+        }
+      }
+      return tempDiv.innerHTML;
+    }
+
+    function addClassToPopupIfMedia(content, popup) {
+      var tempDiv = document.createElement('div');
+      tempDiv.innerHTML = content;
+      var imgTd = tempDiv.querySelector('td img');
+      if (imgTd) {
+        popup._contentNode.classList.add('media');
+        setTimeout(function() { popup.update(); }, 10);
+      } else {
+        popup._contentNode.classList.remove('media');
+      }
+    }
+
+    // Zoom & locate di bawah kiri (tidak ketutup navbar)
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+    L.control.locate({ locateOptions: { maxZoom: 19 }, position: 'bottomleft' }).addTo(map);
+
+    var measureControl = new L.Control.Measure({
+      position: 'topleft',
+      primaryLengthUnit: 'meters', secondaryLengthUnit: 'kilometers',
+      primaryAreaUnit: 'sqmeters', secondaryAreaUnit: 'hectares'
+    });
+    measureControl.addTo(map);
+    document.getElementsByClassName('leaflet-control-measure-toggle')[0].innerHTML = '';
+    document.getElementsByClassName('leaflet-control-measure-toggle')[0].className += ' fas fa-ruler';
+
+    var bounds_group = new L.featureGroup([]);
+    function setBounds() {}
+
+    // Basemap Google Satellite Hybrid
+    map.createPane('pane_GoogleSatelliteHybrid_0');
+    map.getPane('pane_GoogleSatelliteHybrid_0').style.zIndex = 400;
+    var layer_GoogleSatelliteHybrid_0 = L.tileLayer(
+      'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      pane: 'pane_GoogleSatelliteHybrid_0',
+      opacity: 1.0, attribution: '',
+      minZoom: 1, maxZoom: 28, minNativeZoom: 0, maxNativeZoom: 19
+    });
+    map.addLayer(layer_GoogleSatelliteHybrid_0);
+
+    // Layer BangunanRumah2
+    function pop_BangunanRumah2_1(feature, layer) {
+      layer.on({
+        mouseout: function(e) {
+          for (var i in e.target._eventParents) {
+            if (typeof e.target._eventParents[i].resetStyle === 'function') {
+              e.target._eventParents[i].resetStyle(e.target);
+            }
+          }
+        },
+        mouseover: highlightFeature,
+      });
+
+      var p = feature.properties;
+      var safe = function(v) { return v !== null && v !== undefined ? autolinker.link(String(v).replace(/'/g, "\\'").toLocaleString()) : ''; };
+
+      var popupContent =
+        '<table>' +
+        '<tr><td colspan="2">' + safe(p['full_id'])  + '</td></tr>' +
+        '<tr><td colspan="2">' + safe(p['osm_id'])   + '</td></tr>' +
+        '<tr><td colspan="2">' + safe(p['osm_type']) + '</td></tr>' +
+        '<tr><td colspan="2">' + safe(p['building']) + '</td></tr>' +
+        '<tr><td colspan="2">' + safe(p['layer'])    + '</td></tr>' +
+        '<tr><td colspan="2">' + safe(p['name'])     + '</td></tr>' +
+        '<tr><td colspan="2">' + safe(p['amenity'])  + '</td></tr>' +
+        '<tr><td colspan="2">' + safe(p['type'])     + '</td></tr>' +
+        '<tr><th scope="row">Tinggi</th><td>' + safe(p['Tinggi']) + '</td></tr>' +
+        '</table>';
+
+      var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+      layer.on('popupopen', function(e) { addClassToPopupIfMedia(content, e.popup); });
+      layer.bindPopup(content, { maxHeight: 400 });
+    }
+
+    function style_BangunanRumah2_1_0() {
+      return {
+        pane: 'pane_BangunanRumah2_1',
+        opacity: 1, color: 'rgba(35,35,35,1.0)',
+        dashArray: '', lineCap: 'butt', lineJoin: 'miter',
+        weight: 1.0, fill: true,
+        fillOpacity: 1, fillColor: 'rgba(183,72,75,1.0)',
+        interactive: true,
+      };
+    }
+
+    map.createPane('pane_BangunanRumah2_1');
+    map.getPane('pane_BangunanRumah2_1').style.zIndex = 401;
+    map.getPane('pane_BangunanRumah2_1').style['mix-blend-mode'] = 'normal';
+
+    var layer_BangunanRumah2_1 = new L.geoJson(json_BangunanRumah2_1, {
+      attribution: '', interactive: true,
+      dataVar: 'json_BangunanRumah2_1',
+      layerName: 'layer_BangunanRumah2_1',
+      pane: 'pane_BangunanRumah2_1',
+      onEachFeature: pop_BangunanRumah2_1,
+      style: style_BangunanRumah2_1_0,
+    });
+    bounds_group.addLayer(layer_BangunanRumah2_1);
+    map.addLayer(layer_BangunanRumah2_1);
+
+    var overlaysTree = [
+      { label: 'BangunanRumah2', layer: layer_BangunanRumah2_1 },
+      { label: 'Google Satellite Hybrid', layer: layer_GoogleSatelliteHybrid_0, radioGroup: 'bm' }
+    ];
+    L.control.layers.tree(null, overlaysTree, { collapsed: true }).addTo(map);
+    setBounds();
+  </script>
+
+</body>
+</html>
